@@ -21,6 +21,7 @@ import (
 	"path"
 )
 
+//annotate type structs
 type AuthReponse struct {
 	Username    string `json:"username"`
 	Certificate string `json:"certificate"`
