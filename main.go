@@ -33,7 +33,12 @@ type TokenAuthResponse struct {
 func main() {
 
 	flagKeySize := flag.Int("keysize", 2048, "SSH key size")
+	username := flag.String("username", "", "MiruSSH Login")
 	flag.Parse()
+
+	if strings.Trim(*username, "\n") == "" {
+		log.Fatal("username is a required argument")
+	}
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter one time token: ")
