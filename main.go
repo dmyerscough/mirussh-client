@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"net"
@@ -18,35 +17,23 @@ import (
 	"bufio"
 	"bytes"
 	"flag"
-	"path"
+	"net/url"
 )
 
-type AuthReponse struct {
+type SingedAuthResponse struct {
 	Username    string `json:"username"`
 	Certificate string `json:"certificate"`
 	Ttl         uint32 `json:"ttl"`
 }
 
-type Config struct {
-	Endpoint string `yaml:"endpoint"`
-	Token    string `yaml:"token"`
+type TokenAuthResponse struct {
+	Token string `json:"token"`
 }
 
 func main() {
-	config := Config{}
 
 	flagKeySize := flag.Int("keysize", 2048, "SSH key size")
 	flag.Parse()
-
-	configFile, err := ioutil.ReadFile(path.Join(os.Getenv("HOME"), ".mirussh"))
-	if err != nil {
-		log.Fatal("Unable to read ~/.mirussh configuration: %v", err)
-	}
-
-	err = yaml.Unmarshal(configFile, &config)
-	if err != nil {
-		log.Fatal("~/.mirussh contains invalid YAML")
-	}
 
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print("Enter one time token: ")
@@ -64,13 +51,20 @@ func main() {
 		log.Fatalf("Unsupported key type: %v", err)
 	}
 
-	cert := Authenticate(fmt.Sprintf("http://%s/management/sign/", config.Endpoint), config.Token, otp, string(ssh.MarshalAuthorizedKey(publicKey)))
+	token, err := Authenticate("http://127.0.0.1:8080/auth/", "Damian.Myerscough@gmail.com", "s4fem0de")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	cert := SignCertificate(fmt.Sprintf("http://%s/management/sign/", "127.0.0.1:8080"), token, otp, string(ssh.MarshalAuthorizedKey(publicKey)))
 
 	sshCertificate, _, _, _, _ := ssh.ParseAuthorizedKey([]byte(cert.Certificate))
 
 	sshCert, _ := sshCertificate.(*ssh.Certificate)
 
 	ConfigureSSHAgent(key, sshCert, cert.Username, cert.Ttl)
+
 }
 
 func ConfigureSSHAgent(key *rsa.PrivateKey, certificate *ssh.Certificate, username string, ttl uint32) {
@@ -92,9 +86,40 @@ func ConfigureSSHAgent(key *rsa.PrivateKey, certificate *ssh.Certificate, userna
 	}
 }
 
-func Authenticate(endpoint string, token string, opt string, publicKey string) AuthReponse {
+func Authenticate(endpoint, username, password string) (string, error) {
+	token := TokenAuthResponse{}
 	client := &http.Client{}
-	keypair := AuthReponse{}
+
+	data := url.Values{}
+	data.Set("username", username)
+	data.Set("password", password)
+
+	req, _ := http.NewRequest("POST", endpoint, bytes.NewBufferString(data.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err)
+	}
+
+	if resp.StatusCode != 200 {
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		return "", fmt.Errorf("%v", body)
+	}
+
+	json.NewDecoder(resp.Body).Decode(&token)
+
+	resp.Body.Close()
+
+	return token.Token, nil
+}
+
+func SignCertificate(endpoint, token, opt, publicKey string) SingedAuthResponse {
+	client := &http.Client{}
+	keypair := SingedAuthResponse{}
 
 	payload := map[string]string{"public": publicKey}
 
