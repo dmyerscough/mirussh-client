@@ -36,7 +36,7 @@ func ConfigureSSHAgent(key *rsa.PrivateKey, certificate *ssh.Certificate, userna
 
 	socket, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 	if err != nil {
-		log.Fatal("Unable to connect to SSH_AUTH_SOCK: %v", err)
+		log.Fatal("Unable to connect to SSH_AUTH_SOCK: ", err)
 	}
 
 	conn := agent.NewClient(socket)
