@@ -24,6 +24,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 	"log"
+	"net/http"
 	"os"
 	"strings"
 	"syscall"
@@ -72,12 +73,12 @@ the certificate into the SSH agent.`,
 			log.Fatalf("Unsupported key type: %v", err)
 		}
 
-		token, err := client.Authenticate(endpoint+"/auth/", username, string(bytePassword))
+		token, err := client.Authenticate(http.Client{}, endpoint+"/auth/", username, string(bytePassword))
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		cert := client.SignCertificate(fmt.Sprintf(endpoint+"/management/sign/"), token, otp, string(ssh.MarshalAuthorizedKey(publicKey)))
+		cert := client.SignCertificate(http.Client{}, fmt.Sprintf(endpoint+"/management/sign/"), token, otp, string(ssh.MarshalAuthorizedKey(publicKey)))
 
 		sshCertificate, _, _, _, _ := ssh.ParseAuthorizedKey([]byte(cert.Certificate))
 

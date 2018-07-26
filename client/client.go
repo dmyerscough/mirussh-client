@@ -45,9 +45,8 @@ func ConfigureSSHAgent(key *rsa.PrivateKey, certificate *ssh.Certificate, userna
 	}
 }
 
-func Authenticate(endpoint, username, password string) (string, error) {
+func Authenticate(client http.Client, endpoint, username, password string) (string, error) {
 	token := TokenAuthResponse{}
-	client := &http.Client{}
 
 	data := url.Values{}
 	data.Set("username", username)
@@ -76,8 +75,7 @@ func Authenticate(endpoint, username, password string) (string, error) {
 	return token.Token, nil
 }
 
-func SignCertificate(endpoint, token, opt, publicKey string) SingedAuthResponse {
-	client := &http.Client{}
+func SignCertificate(client http.Client, endpoint, token, opt, publicKey string) SingedAuthResponse {
 	keypair := SingedAuthResponse{}
 
 	payload := map[string]string{"public": publicKey}
