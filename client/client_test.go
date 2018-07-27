@@ -7,39 +7,39 @@ import (
 	"testing"
 )
 
-func TestAuthentication(t *testing.T) {
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		io.WriteString(w, `{"token": "abc123"}`)
-	}))
-	defer ts.Close()
-
-	token, _ := Authenticate(http.Client{}, ts.URL, "damian", "secret")
-
-	if token != "abc123" {
-		t.Errorf("Expected: abc123 got: %v", token)
-	}
-
+var AuthTests = []struct {
+	httpStatus    int
+	httpResponse  string
+	expectedURL   string
+	expectedToken string
+}{
+	{httpStatus: http.StatusOK, httpResponse: `{"token": "abc123"}`, expectedURL: "/auth/", expectedToken: "abc123"},
+	{httpStatus: http.StatusBadRequest, httpResponse: `{"error": "invalid username/password"}`, expectedURL: "/auth/", expectedToken: ""},
 }
 
-func TestAuthenticationError(t *testing.T) {
+func TestAuthentication(t *testing.T) {
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusBadRequest)
-		io.WriteString(w, `{"error": "invalid username/password"}`)
-	}))
-	defer ts.Close()
+	for _, test := range AuthTests {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(test.httpStatus)
+			w.Header().Set("Content-Type", "application/json")
+			io.WriteString(w, test.httpResponse)
 
-	token, err := Authenticate(http.Client{}, ts.URL, "damian", "secret")
+			if r.Method != "POST" {
+				t.Errorf("Expected: POST Got: %q", r.Method)
+			}
 
-	if err == nil {
-		t.Errorf("Expected error response")
+			if r.URL.EscapedPath() != test.expectedURL {
+				t.Errorf("Expected: %q Got: %q", test.expectedURL, r.URL.EscapedPath())
+			}
+
+		}))
+		defer ts.Close()
+
+		token, _ := Authenticate(http.Client{}, ts.URL, "damian", "secret")
+
+		if token != test.expectedToken {
+			t.Errorf("Expected: %q Got: %q", test.expectedToken, token)
+		}
 	}
-
-	if token != "" {
-		t.Errorf("Expected: '' got: %v", token)
-	}
-
 }

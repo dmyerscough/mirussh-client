@@ -73,7 +73,7 @@ the certificate into the SSH agent.`,
 			log.Fatalf("Unsupported key type: %v", err)
 		}
 
-		token, err := client.Authenticate(http.Client{}, endpoint+"/auth/", username, string(bytePassword))
+		token, err := client.Authenticate(http.Client{}, endpoint, username, string(bytePassword))
 		if err != nil {
 			log.Fatal(err)
 		}

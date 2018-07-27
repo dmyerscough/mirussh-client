@@ -1,8 +1,10 @@
 package client
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -10,10 +12,8 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
-
-	"bytes"
 	"net/url"
+	"os"
 )
 
 type SingedAuthResponse struct {
@@ -52,7 +52,7 @@ func Authenticate(client http.Client, endpoint, username, password string) (stri
 	data.Set("username", username)
 	data.Set("password", password)
 
-	req, _ := http.NewRequest("POST", endpoint, bytes.NewBufferString(data.Encode()))
+	req, _ := http.NewRequest("POST", endpoint+"/auth/", bytes.NewBufferString(data.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 	resp, err := client.Do(req)
@@ -65,7 +65,7 @@ func Authenticate(client http.Client, endpoint, username, password string) (stri
 		if err != nil {
 			return "", err
 		}
-		return "", fmt.Errorf("%v", string(body))
+		return "", errors.New(string(body))
 	}
 
 	json.NewDecoder(resp.Body).Decode(&token)
