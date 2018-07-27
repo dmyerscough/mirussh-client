@@ -78,7 +78,7 @@ the certificate into the SSH agent.`,
 			log.Fatal(err)
 		}
 
-		cert := client.SignCertificate(http.Client{}, fmt.Sprintf(endpoint+"/management/sign/"), token, otp, string(ssh.MarshalAuthorizedKey(publicKey)))
+		cert := client.SignCertificate(http.Client{}, endpoint, token, otp, string(ssh.MarshalAuthorizedKey(publicKey)))
 
 		sshCertificate, _, _, _, _ := ssh.ParseAuthorizedKey([]byte(cert.Certificate))
 

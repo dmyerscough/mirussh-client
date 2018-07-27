@@ -26,6 +26,10 @@ type TokenAuthResponse struct {
 	Token string `json:"token"`
 }
 
+type PublicKeyPayload struct {
+	public string
+}
+
 func ConfigureSSHAgent(key *rsa.PrivateKey, certificate *ssh.Certificate, username string, ttl uint32) {
 	addedKey := agent.AddedKey{
 		PrivateKey:   key,
@@ -78,11 +82,11 @@ func Authenticate(client http.Client, endpoint, username, password string) (stri
 func SignCertificate(client http.Client, endpoint, token, opt, publicKey string) SingedAuthResponse {
 	keypair := SingedAuthResponse{}
 
-	payload := map[string]string{"public": publicKey}
+	payload := PublicKeyPayload{publicKey}
 
 	jsonPayload, _ := json.Marshal(payload)
 
-	req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonPayload))
+	req, _ := http.NewRequest("POST", endpoint+"/management/sign/", bytes.NewBuffer(jsonPayload))
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("Token %s", token))
