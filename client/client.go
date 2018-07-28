@@ -1,8 +1,10 @@
 package client
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -10,10 +12,8 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"os"
-
-	"bytes"
 	"net/url"
+	"os"
 )
 
 type SingedAuthResponse struct {
@@ -24,6 +24,10 @@ type SingedAuthResponse struct {
 
 type TokenAuthResponse struct {
 	Token string `json:"token"`
+}
+
+type PublicKeyPayload struct {
+	public string
 }
 
 func ConfigureSSHAgent(key *rsa.PrivateKey, certificate *ssh.Certificate, username string, ttl uint32) {
@@ -52,7 +56,7 @@ func Authenticate(client http.Client, endpoint, username, password string) (stri
 	data.Set("username", username)
 	data.Set("password", password)
 
-	req, _ := http.NewRequest("POST", endpoint, bytes.NewBufferString(data.Encode()))
+	req, _ := http.NewRequest("POST", endpoint+"/auth/", bytes.NewBufferString(data.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
 
 	resp, err := client.Do(req)
@@ -65,7 +69,7 @@ func Authenticate(client http.Client, endpoint, username, password string) (stri
 		if err != nil {
 			return "", err
 		}
-		return "", fmt.Errorf("%v", string(body))
+		return "", errors.New(string(body))
 	}
 
 	json.NewDecoder(resp.Body).Decode(&token)
@@ -78,11 +82,11 @@ func Authenticate(client http.Client, endpoint, username, password string) (stri
 func SignCertificate(client http.Client, endpoint, token, opt, publicKey string) SingedAuthResponse {
 	keypair := SingedAuthResponse{}
 
-	payload := map[string]string{"public": publicKey}
+	payload := PublicKeyPayload{publicKey}
 
 	jsonPayload, _ := json.Marshal(payload)
 
-	req, _ := http.NewRequest("POST", endpoint, bytes.NewBuffer(jsonPayload))
+	req, _ := http.NewRequest("POST", endpoint+"/management/sign/", bytes.NewBuffer(jsonPayload))
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("Token %s", token))
