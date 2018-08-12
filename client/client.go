@@ -27,7 +27,7 @@ type TokenAuthResponse struct {
 }
 
 type PublicKeyPayload struct {
-	public string
+	Public string `json:"public"`
 }
 
 func ConfigureSSHAgent(key *rsa.PrivateKey, certificate *ssh.Certificate, username string, ttl uint32) {
@@ -82,7 +82,7 @@ func Authenticate(client http.Client, endpoint, username, password string) (stri
 func SignCertificate(client http.Client, endpoint, token, opt, publicKey string) SingedAuthResponse {
 	keypair := SingedAuthResponse{}
 
-	payload := PublicKeyPayload{publicKey}
+	payload := PublicKeyPayload{Public: publicKey}
 
 	jsonPayload, _ := json.Marshal(payload)
 
