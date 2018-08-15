@@ -79,7 +79,7 @@ func Authenticate(client http.Client, endpoint, username, password string) (stri
 	return token.Token, nil
 }
 
-func SignCertificate(client http.Client, endpoint, token, opt, publicKey string) SingedAuthResponse {
+func SignCertificate(client http.Client, endpoint, token, otp, publicKey string) SingedAuthResponse {
 	keypair := SingedAuthResponse{}
 
 	payload := PublicKeyPayload{Public: publicKey}
@@ -90,7 +90,7 @@ func SignCertificate(client http.Client, endpoint, token, opt, publicKey string)
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("Token %s", token))
-	req.Header.Add("X-MiruSSH-OTP", opt)
+	req.Header.Add("X-MiruSSH-OTP", otp)
 
 	resp, err := client.Do(req)
 	if err != nil {
